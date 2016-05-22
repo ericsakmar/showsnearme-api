@@ -24,7 +24,7 @@ app.use(cookieParser());
 // uncomment to serve static assets
 // app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/api', api);
+app.use('/', api);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
