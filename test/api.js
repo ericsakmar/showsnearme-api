@@ -1,17 +1,17 @@
 // http://51elliot.blogspot.com/2013/08/testing-expressjs-rest-api-with-mocha.html
 // http://www.chovy.com/node-js/testing-a-node-js-express-app-with-mocha-and-should-js/
 if (process.env.NODE_ENV !== 'test') {
-	console.log("Not in test mode!");
-	process.exit(1);
+  console.log("Not in test mode!");
+  process.exit(1);
 }
 
 var http = require('http'),
-	  should = require('should'),
-	  app  = require(__dirname + '/../app.js'),
-	  port = 3333,
-		server,
-		Message = require('../models/message'),
-		mongoose = require('mongoose');
+  should = require('should'),
+  app  = require(__dirname + '/../app.js'),
+  port = 3333,
+  server,
+  Event = require('../models/event'),
+  mongoose = require('mongoose');
 
 describe('api', function () {
   before (function (done) {
@@ -38,37 +38,43 @@ describe('api', function () {
     });
   });
 
-  describe('messages service', function() {
-		var expected;
+  describe('events service', function() {
+    var expected;
 
-		before(function(done) {
-	    expected = new Message({text: 'Hello world!'});
-			expected.save(function(err, expected) {
-	      done();
-	    });
-	  });
+    before(function(done) {
+      expected = new Event({
+        name: 'Test Event',
+        description: 'Using this event for testing.',
+        place: 'The basement.',
+        time: Date.now()
+      });
 
-	  it('should get a list of messages', function (done) {
-	    var params = {
-	      "host": "localhost",
-	      "port": port,
-	      "path": "/api/messages",
-	      "method": "GET"
-	    };
+      expected.save(function(err, expected) {
+        done();
+      });
+    });
 
-	    http.get(params, function (res) {
-	      res.statusCode.should.eql(200);
+    it('should get a list of events', function (done) {
+      var params = {
+        "host": "localhost",
+        "port": port,
+        "path": "/api/events",
+        "method": "GET"
+      };
 
-	      res.on('data', function (d) {
-	        var messages = JSON.parse(d.toString('utf8'));
-	        messages.should.have.length(1);
+      http.get(params, function (res) {
+        res.statusCode.should.eql(200);
 
-	        var actual = messages[0];
+        res.on('data', function (d) {
+          var events = JSON.parse(d.toString('utf8'));
+          events.should.have.length(1);
 
-	        actual.should.have.property('text').and.eql(expected.text);
-	        done();
-	      });
-	    });
-	  });
-	});
+          var actual = events[0];
+
+          actual.should.have.property('name').and.eql(expected.name);
+          done();
+        });
+      });
+    });
+  });
 });
