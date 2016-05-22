@@ -1,10 +1,10 @@
 var express = require('express'),
     router = express.Router(),
-    Message = require('../models/message');
+    Event = require('../models/event');
 
-router.get('/messages', function(req, res, next) {
-  Message.find(function (err, messages) {
-    res.json(messages);
+router.get('/events', function(req, res, next) {
+  Event.find(function (err, events) {
+    res.json(events);
   });
 });
 
