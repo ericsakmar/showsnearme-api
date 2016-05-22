@@ -58,7 +58,7 @@ describe('api', function () {
       var params = {
         "host": "localhost",
         "port": port,
-        "path": "/api/events",
+        "path": "/events",
         "method": "GET"
       };
 
