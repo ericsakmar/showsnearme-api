@@ -1,7 +1,7 @@
 image: node:5
 
 services:
-  - mongodb:3.0.1 
+  - mongo 
 
 all_tests:
   script:
