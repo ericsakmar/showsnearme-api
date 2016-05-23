@@ -41,6 +41,13 @@ describe('api', function () {
   describe('events service', function() {
     var expected;
 
+    const postParams = {
+      host:'localhost', port:port, path:'/events', method:'POST',
+      headers: {
+        'Content-Type':'application/json'
+      }
+    };
+
     before(function(done) {
       expected = new Event({
         name: 'Test Event',
@@ -78,13 +85,6 @@ describe('api', function () {
     });
 
     it('adds an event', function(done) {
-      const params = {
-        host:'localhost', port:port, path:'/events', method:'POST',
-        headers: {
-          'Content-Type':'application/json'
-        }
-      };
-
       const expected = {
         name: 'Test Event',
         description: 'Testing',
@@ -92,7 +92,7 @@ describe('api', function () {
         time: Date.now()
       };
 
-      const req = http.request(params, (res) => {
+      const req = http.request(postParams, (res) => {
         res.statusCode.should.eql(201);
 
         res.setEncoding('utf8');
@@ -112,6 +112,27 @@ describe('api', function () {
       req.end();
     });
 
+    it('validates an event', function(done) {
+      const data = {
+        name: 'Missing Required'
+      };
+
+      const req = http.request(postParams, (res) => {
+        res.statusCode.should.eql(400);
+
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          const actual = JSON.parse(chunk);
+          actual.should.containEql('Path `time` is required.');
+          actual.should.containEql('Path `place` is required.');
+        });
+
+        res.on('end', () => done());
+      });
+
+      req.write(JSON.stringify(data));
+      req.end();
+    });
 
   });
 });
