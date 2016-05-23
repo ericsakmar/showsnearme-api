@@ -1,10 +1,10 @@
 var mongoose = require('mongoose');
 
 var schema = mongoose.Schema({
-    name: String,
-    description: String,
-    place: String, // probably make a separate type for this
-    time: Date
+  name: {type:String, required:true},
+  description: String,
+  place: {type:String, required:true},
+  time: {type:Date, required:true}
 });
 
 var Event = mongoose.model('Event', schema);
