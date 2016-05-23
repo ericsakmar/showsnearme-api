@@ -76,5 +76,42 @@ describe('api', function () {
         });
       });
     });
+
+    it('adds an event', function(done) {
+      const params = {
+        host:'localhost', port:port, path:'/events', method:'POST',
+        headers: {
+          'Content-Type':'application/json'
+        }
+      };
+
+      const expected = {
+        name: 'Test Event',
+        description: 'Testing',
+        place: 'Right here. Right now.',
+        time: Date.now()
+      };
+
+      const req = http.request(params, (res) => {
+        res.statusCode.should.eql(201);
+
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          const actual = JSON.parse(chunk);
+
+          actual.should.have.property('_id');
+          actual.name.should.eql(expected.name);
+        });
+
+        res.on('end', () => {
+          done();
+        })
+      });
+
+      req.write(JSON.stringify(expected));
+      req.end();
+    });
+
+
   });
 });
