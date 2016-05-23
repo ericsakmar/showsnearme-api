@@ -1,14 +1,9 @@
-before_script:
-  - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
-  - echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
-  - apt-get -y update
-  - apt-get install -y mongodb-org
+image: node:5
 
-  - curl --silent --location https://deb.nodesource.com/setup_4.x | sudo bash -
-  - apt-get install --yes nodejs
+services:
+  mongodb
 
-  - npm install
-
-test:
+all_tests:
   script:
+    - npm install
     - npm test
