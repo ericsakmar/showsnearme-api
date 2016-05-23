@@ -12,7 +12,13 @@ router.post('/events', function(req, res) {
   const event = new Event(req.body);
 
   event.save((err) => {
-    res.status(201).json(event);
+    if (err) {
+      var messages = Object.keys(err.errors).map((e) => err.errors[e].message);
+      res.status(400).json(messages);
+    }
+    else {
+      res.status(201).json(event);
+    }
   });
 });
 
