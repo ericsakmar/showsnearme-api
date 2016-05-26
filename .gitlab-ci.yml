@@ -9,10 +9,10 @@ services:
   - mongo
 
 variables:
-  MONGO_URI: 'mongodb://mongo/showsnearme-api-test'
+  MONGO_URI: 'mongodb://mongo'
   NODE_ENV: 'test'
 
 all_tests:
   script:
-    - npm install
+    - npm install --silent
     - npm test
