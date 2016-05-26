@@ -39,7 +39,14 @@ describe('api', function () {
   });
 
   describe('events service', function() {
-    var e1, e2, e3
+    var e1, e2, e3;
+
+    const getParams = {
+      "host": "localhost",
+      "port": port,
+      "path": "/events",
+      "method": "GET"
+    };
 
     const postParams = {
       host:'localhost', port:port, path:'/events', method:'POST',
@@ -47,8 +54,22 @@ describe('api', function () {
         'Content-Type':'application/json'
       }
     };
+    
+    function create(event, done) {
+      const req = http.request(postParams, (res) => {
+        var resBody = '';
 
-    before(function(done) {
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => resBody += chunk );
+
+        res.on('end', () => done(res, JSON.parse(resBody)));
+      });
+
+      req.write(JSON.stringify(event));
+      req.end();
+    }
+
+    beforeEach(function(done) {
       e1 = new Event({
         name: 'Test Event',
         description: 'Using this event for testing.',
@@ -76,14 +97,8 @@ describe('api', function () {
     });
 
     it('should get a list of events', function (done) {
-      var params = {
-        "host": "localhost",
-        "port": port,
-        "path": "/events",
-        "method": "GET"
-      };
 
-      http.get(params, function (res) {
+      http.get(getParams, function (res) {
         res.statusCode.should.eql(200);
 
         res.on('data', function (d) {
@@ -102,31 +117,19 @@ describe('api', function () {
     });
 
     it('adds an event', function(done) {
-      const e1 = {
-        name: 'Test Event',
-        description: 'Testing',
-        place: 'Right here. Right now.',
-        time: Date.now()
-      };
-
-      const req = http.request(postParams, (res) => {
-        res.statusCode.should.eql(201);
-
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-          const actual = JSON.parse(chunk);
-
-          actual.should.have.property('_id');
-          actual.name.should.eql(e1.name);
-        });
-
-        res.on('end', () => {
-          done();
-        })
+      const e4 = new Event({
+        name: 'Test Event 4',
+        description: 'Using this event for testing.',
+        place: 'The basement.',
+        time: new Date('2016-05-28')
       });
 
-      req.write(JSON.stringify(e1));
-      req.end();
+      create(e4, (res, actual) => {
+        res.statusCode.should.eql(201);
+        actual.should.have.property('_id');
+        actual.name.should.eql(e4.name);
+        done();
+      });
     });
 
     it('validates an event', function(done) {
@@ -134,21 +137,30 @@ describe('api', function () {
         name: 'Missing Required'
       };
 
-      const req = http.request(postParams, (res) => {
+      create(data, (res, actual) => {
         res.statusCode.should.eql(400);
+        actual.should.containEql('Path `time` is required.');
+        actual.should.containEql('Path `place` is required.');
+        done();
+      });
+    });
 
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-          const actual = JSON.parse(chunk);
-          actual.should.containEql('Path `time` is required.');
-          actual.should.containEql('Path `place` is required.');
-        });
-
-        res.on('end', () => done());
+    it('shows an event', (done) => {
+      const params = Object.assign({}, getParams, {
+        path:`${getParams.path}/${e1._id}`
       });
 
-      req.write(JSON.stringify(data));
-      req.end();
+      http.get(params, (res) => {
+        res.statusCode.should.eql(200);
+
+        res.on('data', (d) => {
+          const actual = JSON.parse(d.toString('utf8'));
+          actual._id.should.eql(e1._id);
+          actual.name.should.eql(e1.name);
+        });
+
+        done();
+      });
     });
 
   });
