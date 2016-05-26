@@ -39,7 +39,7 @@ describe('api', function () {
   });
 
   describe('events service', function() {
-    var expected;
+    var e1, e2, e3
 
     const postParams = {
       host:'localhost', port:port, path:'/events', method:'POST',
@@ -49,14 +49,28 @@ describe('api', function () {
     };
 
     before(function(done) {
-      expected = new Event({
+      e1 = new Event({
         name: 'Test Event',
         description: 'Using this event for testing.',
         place: 'The basement.',
-        time: Date.now()
+        time: new Date('2016-05-28')
+      });
+      
+      e2 = new Event({
+        name: 'Test Event 2',
+        description: 'Using this event for testing.',
+        place: 'The basement.',
+        time: new Date('2016-05-28')
       });
 
-      expected.save(function(err, expected) {
+      e3 = new Event({
+        name: 'Test Event 3',
+        description: 'Using this event for testing.',
+        place: 'The basement.',
+        time: new Date('2016-05-27')
+      });
+
+      Event.create([e1, e2, e3], function(err) {
         done();
       });
     });
@@ -73,19 +87,22 @@ describe('api', function () {
         res.statusCode.should.eql(200);
 
         res.on('data', function (d) {
-          var events = JSON.parse(d.toString('utf8'));
-          events.should.have.length(1);
+          var actual = JSON.parse(d.toString('utf8'));
+          actual.should.have.length(2);
 
-          var actual = events[0];
+          actual[0]._id.should.eql('2016-05-27');
+          actual[0].events.length.should.eql(1);
 
-          actual.should.have.property('name').and.eql(expected.name);
+          actual[1]._id.should.eql('2016-05-28');
+          actual[1].events.length.should.eql(2);
+
           done();
         });
       });
     });
 
     it('adds an event', function(done) {
-      const expected = {
+      const e1 = {
         name: 'Test Event',
         description: 'Testing',
         place: 'Right here. Right now.',
@@ -100,7 +117,7 @@ describe('api', function () {
           const actual = JSON.parse(chunk);
 
           actual.should.have.property('_id');
-          actual.name.should.eql(expected.name);
+          actual.name.should.eql(e1.name);
         });
 
         res.on('end', () => {
@@ -108,7 +125,7 @@ describe('api', function () {
         })
       });
 
-      req.write(JSON.stringify(expected));
+      req.write(JSON.stringify(e1));
       req.end();
     });
 
