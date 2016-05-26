@@ -1,7 +1,16 @@
 image: node:5
 
+cache:
+  key: "$CI_BUILD_REF_NAME"
+  paths:
+  - node_modules/
+
 services:
-  - mongodb
+  - mongo
+
+variables:
+  MONGO_URI: 'mongodb://mongo/showsnearme-api-test'
+  NODE_ENV: 'test'
 
 all_tests:
   script:
