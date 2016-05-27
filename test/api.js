@@ -11,7 +11,8 @@ var http = require('http'),
   port = 3333,
   server,
   Event = require('../models/event'),
-  mongoose = require('mongoose');
+  mongoose = require('mongoose'),
+  keys = require('../api/keys');
 
 describe('api', function () {
   before (function (done) {
@@ -45,7 +46,10 @@ describe('api', function () {
       "host": "localhost",
       "port": port,
       "path": "/events",
-      "method": "GET"
+      "method": "GET",
+      headers: {
+        'Authorization': keys.admin
+      }
     };
 
     const postParams = {
@@ -54,14 +58,15 @@ describe('api', function () {
       path:'/events', 
       method:'POST',
       headers: {
-        'Content-Type':'application/json'
+        'Content-Type':'application/json',
+        'Authorization': keys.admin
       }
     };
 
     const putParams = Object.assign({}, postParams, { method:'PUT' });
     
-    function create(event, done) {
-      const req = http.request(postParams, (res) => {
+    function call(params, event, done) {
+      const req = http.request(params, (res) => {
         var resBody = '';
         res.setEncoding('utf8');
         res.on('data', (chunk) => resBody += chunk );
@@ -70,6 +75,10 @@ describe('api', function () {
 
       req.write(JSON.stringify(event));
       req.end();
+    }
+
+    function create(event, done) {
+      call(postParams, event, done);
     }
 
     function read(id, done) {
@@ -90,15 +99,7 @@ describe('api', function () {
         path:`${putParams.path}/${event._id}`
       });
 
-      const req = http.request(params, (res) => {
-        var resBody = '';
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => resBody += chunk );
-        res.on('end', () => done(res, JSON.parse(resBody)));
-      });
-
-      req.write(JSON.stringify(event));
-      req.end();
+      call(params, event, done);
     }
 
 
@@ -129,8 +130,7 @@ describe('api', function () {
       });
     });
 
-    it('should get a list of events', function (done) {
-
+    it('lists events', function (done) {
       http.get(getParams, function (res) {
         res.statusCode.should.eql(200);
 
@@ -146,6 +146,19 @@ describe('api', function () {
 
           done();
         });
+      });
+    });
+
+    it('requires permissions for list', (done) => {
+      const params = Object.assign({}, getParams, {
+        headers: Object.assign({}, getParams.headers, {
+          'Authorization': 'nope'
+        })
+      });
+
+      http.get(params, (res) => {
+        res.statusCode.should.eql(401);
+        done();
       });
     });
 
@@ -178,6 +191,26 @@ describe('api', function () {
       });
     });
 
+    it('requires permissions for create', (done) => {
+      const params = Object.assign({}, postParams, {
+        headers: Object.assign({}, postParams.headers, {
+          'Authorization': 'nope'
+        })
+      });
+      
+      const e = new Event({
+        name: 'Unauthorized',
+        description: 'Using this event for testing.',
+        place: 'The basement.',
+        time: new Date('2016-05-28')
+      });
+
+      call(params, e, (res, actual) => {
+        res.statusCode.should.eql(401);
+        done();
+      });
+    });
+
     it('shows an event', (done) => {
       read(e1._id, (res, actual) => {
         res.statusCode.should.eql(200);
@@ -194,6 +227,20 @@ describe('api', function () {
       });
     });
 
+    it('requires permissions for read', (done) => {
+      const params = Object.assign({}, getParams, {
+        path:`${getParams.path}/${e1._id}`,
+        headers: Object.assign({}, getParams.headers, {
+          'Authorization': 'nope'
+        })
+      });
+
+      http.get(params, (res) => {
+        res.statusCode.should.eql(401);
+        done();
+      });
+    });
+
     it('updates an event', (done) => {
       e1.name = 'Updated Name';
 
@@ -204,5 +251,20 @@ describe('api', function () {
       });
     });
 
+    it('requires permissions to update', (done) => {
+      e1.name = 'Updated Name';
+
+      const params = Object.assign({}, putParams, {
+        path:`${putParams.path}/${e1._id}`,
+        headers: Object.assign({}, postParams.headers, {
+          'Authorization': 'nope'
+        })
+      });
+
+      call(params, e1, (res, actual) => {
+        res.statusCode.should.eql(401);
+        done();
+      });
+    });
   });
 });
