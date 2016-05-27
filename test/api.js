@@ -58,15 +58,26 @@ describe('api', function () {
     function create(event, done) {
       const req = http.request(postParams, (res) => {
         var resBody = '';
-
         res.setEncoding('utf8');
         res.on('data', (chunk) => resBody += chunk );
-
         res.on('end', () => done(res, JSON.parse(resBody)));
       });
 
       req.write(JSON.stringify(event));
       req.end();
+    }
+
+    function read(id, done) {
+      const params = Object.assign({}, getParams, {
+        path:`${getParams.path}/${id}`
+      });
+
+      http.get(params, (res) => {
+        var resBody = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => resBody += chunk );
+        res.on('end', () => done(res, JSON.parse(resBody)));
+      });
     }
 
     beforeEach(function(done) {
@@ -146,19 +157,17 @@ describe('api', function () {
     });
 
     it('shows an event', (done) => {
-      const params = Object.assign({}, getParams, {
-        path:`${getParams.path}/${e1._id}`
-      });
-
-      http.get(params, (res) => {
+      read(e1._id, (res, actual) => {
         res.statusCode.should.eql(200);
+        actual._id.should.eql(e1._id.toString());
+        actual.name.should.eql(e1.name);
+        done();
+      });
+    });
 
-        res.on('data', (d) => {
-          const actual = JSON.parse(d.toString('utf8'));
-          actual._id.should.eql(e1._id);
-          actual.name.should.eql(e1.name);
-        });
-
+    it('404s when it should', (done) => {
+      read('123', (res, actual) => {
+        res.statusCode.should.eql(404);
         done();
       });
     });
