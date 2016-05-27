@@ -5,8 +5,9 @@ var express = require('express'),
 router.get('/events/:id', function(req, res) {
   Event.findById(req.params.id).then(
     (event) => res.json(event),
-    (err) => res.status(500).json(err)
+    (err) => res.status(404).json(err)
   );
+
 });
 
 router.get('/events', function(req, res) {
