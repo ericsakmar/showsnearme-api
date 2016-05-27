@@ -7,7 +7,6 @@ router.get('/events/:id', function(req, res) {
     (event) => res.json(event),
     (err) => res.status(404).json(err)
   );
-
 });
 
 router.get('/events', function(req, res) {
@@ -38,6 +37,15 @@ router.post('/events', function(req, res) {
         res.status(500).json(err);
       }
     }
+  );
+});
+
+router.put('/events/:id', (req, res) => {
+  delete req.body._id;
+
+  Event.findOneAndUpdate({ _id:req.params.id }, req.body, { new:true }).then(
+    (event) => res.json(event),
+    (err) => res.status(500).json(err)
   );
 });
 

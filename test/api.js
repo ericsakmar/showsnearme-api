@@ -49,11 +49,16 @@ describe('api', function () {
     };
 
     const postParams = {
-      host:'localhost', port:port, path:'/events', method:'POST',
+      host:'localhost', 
+      port:port, 
+      path:'/events', 
+      method:'POST',
       headers: {
         'Content-Type':'application/json'
       }
     };
+
+    const putParams = Object.assign({}, postParams, { method:'PUT' });
     
     function create(event, done) {
       const req = http.request(postParams, (res) => {
@@ -79,6 +84,23 @@ describe('api', function () {
         res.on('end', () => done(res, JSON.parse(resBody)));
       });
     }
+
+    function update(event, done) {
+      const params = Object.assign({}, putParams, {
+        path:`${putParams.path}/${event._id}`
+      });
+
+      const req = http.request(params, (res) => {
+        var resBody = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => resBody += chunk );
+        res.on('end', () => done(res, JSON.parse(resBody)));
+      });
+
+      req.write(JSON.stringify(event));
+      req.end();
+    }
+
 
     beforeEach(function(done) {
       e1 = new Event({
@@ -168,6 +190,16 @@ describe('api', function () {
     it('404s when it should', (done) => {
       read('123', (res, actual) => {
         res.statusCode.should.eql(404);
+        done();
+      });
+    });
+
+    it('updates an event', (done) => {
+      e1.name = 'Updated Name';
+
+      update(e1, (res, actual) => {
+        res.statusCode.should.eql(200);
+        actual.name.should.eql(e1.name);
         done();
       });
     });
