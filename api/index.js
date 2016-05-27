@@ -1,15 +1,16 @@
-var express = require('express'),
+const express = require('express'),
     router = express.Router(),
-    Event = require('../models/event');
+    Event = require('../models/event'),
+    mustBe = require('./auth').mustBe;
 
-router.get('/events/:id', function(req, res) {
+router.get('/events/:id', mustBe('admin'), function(req, res) {
   Event.findById(req.params.id).then(
     (event) => res.json(event),
     (err) => res.status(404).json(err)
   );
 });
 
-router.get('/events', function(req, res) {
+router.get('/events', mustBe('admin'), function(req, res) {
   Event.aggregate([{ 
     $group: {
       _id: { $dateToString: { format: '%Y-%m-%d', date: '$time' } },
@@ -23,7 +24,7 @@ router.get('/events', function(req, res) {
   );
 });
 
-router.post('/events', function(req, res) {
+router.post('/events', mustBe('admin'), function(req, res) {
   const event = new Event(req.body);
 
   event.save().then(
@@ -40,7 +41,7 @@ router.post('/events', function(req, res) {
   );
 });
 
-router.put('/events/:id', (req, res) => {
+router.put('/events/:id', mustBe('admin'), (req, res) => {
   delete req.body._id;
 
   Event.findOneAndUpdate({ _id:req.params.id }, req.body, { new:true }).then(
