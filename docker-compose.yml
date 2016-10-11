@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+  db:
+    image: mongo
+
+  api:
+    build: .
+    command: npm start
+    volumes:
+      - .:/opt/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db

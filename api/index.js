@@ -1,6 +1,7 @@
 const express = require('express'),
     router = express.Router(),
     Event = require('../models/event'),
+    Location = require('../models/location'),
     mustBe = require('./auth').mustBe;
 
 router.get('/events/:id', mustBe('admin'), function(req, res) {
@@ -25,20 +26,53 @@ router.get('/events', mustBe('admin'), function(req, res) {
 });
 
 router.post('/events', mustBe('admin'), function(req, res) {
-  const event = new Event(req.body);
+  const params = Object.assign({}, req.body),
+    locationData = params.location;
 
-  event.save().then(
-    (event) => { res.status(201).json(event); },
-    (err) => {
-      if (err.name === 'ValidationError') {
-        const messages = Object.keys(err.errors).map((e) => err.errors[e].message);
-        res.status(400).json(messages);
+  delete params.location;
+  
+  var promise;
+
+  if (locationData) {
+    promise = Location.findOneAndUpdate(
+      {remoteId: locationData.remoteId},
+      locationData,
+      { upsert:true, new:true })
+
+      .then(
+        (location) => {
+          const event = new Event(params);
+          event.location = location._id;
+          return event.save();
+        }
+      )
+  }
+  else {
+    const event = new Event(params);
+    promise = event.save();
+  }
+
+  promise
+    .then(
+      (event) => {
+        return Event.populate(event, { path:'location' }); 
+      },
+      (err) => {
+        if (err.name === 'ValidationError') {
+          const messages = Object.keys(err.errors).map((e) => err.errors[e].message);
+          res.status(400).json(messages);
+        }
+        else {
+          res.status(500).json(err);
+        }
       }
-      else {
-        res.status(500).json(err);
+    )
+
+    .then(
+      (event) => { 
+        res.status(201).json(event);
       }
-    }
-  );
+    );
 });
 
 router.put('/events/:id', mustBe('admin'), (req, res) => {
