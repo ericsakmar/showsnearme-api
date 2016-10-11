@@ -11,6 +11,7 @@ var http = require('http'),
   port = 3333,
   server,
   Event = require('../models/event'),
+  Location = require('../models/location'),
   mongoose = require('mongoose'),
   keys = require('../api/keys');
 
@@ -40,7 +41,8 @@ describe('api', function () {
   });
 
   describe('events service', function() {
-    var e1, e2, e3;
+    var e1, e2, e3,
+      l1, l2;
 
     const getParams = {
       "host": "localhost",
@@ -104,29 +106,45 @@ describe('api', function () {
 
 
     beforeEach(function(done) {
+      l1 = new Location({
+        name: 'Location 1',
+        remoteId: 'l1'
+      });
+
+      l2 = new Location({
+        name: 'Location 2',
+        remoteId: 'l2'
+      });
+
       e1 = new Event({
         name: 'Test Event',
+        remoteId: 'e1',
         description: 'Using this event for testing.',
-        place: 'The basement.',
         time: new Date('2016-05-28')
       });
       
       e2 = new Event({
         name: 'Test Event 2',
+        remoteId: 'e2',
         description: 'Using this event for testing.',
-        place: 'The basement.',
         time: new Date('2016-05-28')
       });
 
       e3 = new Event({
         name: 'Test Event 3',
+        remoteId: 'e3',
         description: 'Using this event for testing.',
-        place: 'The basement.',
         time: new Date('2016-05-27')
       });
 
-      Event.create([e1, e2, e3], function(err) {
-        done();
+      Location.create([l1, l2], function(err) {
+        e1.location = l1;
+        e2.location = l1;
+        e3.location = l2;
+
+        Event.create([e1, e2, e3], function(err) {
+          done();
+        });
       });
     });
 
@@ -140,6 +158,7 @@ describe('api', function () {
 
           actual[0]._id.should.eql('2016-05-27');
           actual[0].events.length.should.eql(1);
+          console.log(actual[0].events);
 
           actual[1]._id.should.eql('2016-05-28');
           actual[1].events.length.should.eql(2);
@@ -163,12 +182,16 @@ describe('api', function () {
     });
 
     it('adds an event', function(done) {
-      const e4 = new Event({
+      const e4 = {
         name: 'Test Event 4',
+        remoteId: 'e4',
         description: 'Using this event for testing.',
-        place: 'The basement.',
-        time: new Date('2016-05-28')
-      });
+        time: new Date('2016-05-28'),
+        location: {
+          name: 'Location 3',
+          remoteId: 'l3'
+        }
+      };
 
       create(e4, (res, actual) => {
         res.statusCode.should.eql(201);
@@ -186,7 +209,6 @@ describe('api', function () {
       create(data, (res, actual) => {
         res.statusCode.should.eql(400);
         actual.should.containEql('Path `time` is required.');
-        actual.should.containEql('Path `place` is required.');
         done();
       });
     });
@@ -200,8 +222,8 @@ describe('api', function () {
       
       const e = new Event({
         name: 'Unauthorized',
+        remoteId: 'e',
         description: 'Using this event for testing.',
-        place: 'The basement.',
         time: new Date('2016-05-28')
       });
 
