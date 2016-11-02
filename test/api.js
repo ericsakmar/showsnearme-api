@@ -92,7 +92,9 @@ describe('api', function () {
         var resBody = '';
         res.setEncoding('utf8');
         res.on('data', (chunk) => resBody += chunk );
-        res.on('end', () => done(res, JSON.parse(resBody)));
+        res.on('end', () => {
+          done(res, JSON.parse(resBody))
+        });
       });
     }
 
@@ -104,8 +106,7 @@ describe('api', function () {
       call(params, event, done);
     }
 
-
-    beforeEach(function(done) {
+    before(function(done) {
       l1 = new Location({
         name: 'Location 1',
         remoteId: 'l1'
@@ -158,7 +159,6 @@ describe('api', function () {
 
           actual[0]._id.should.eql('2016-05-27');
           actual[0].events.length.should.eql(1);
-          console.log(actual[0].events);
 
           actual[1]._id.should.eql('2016-05-28');
           actual[1].events.length.should.eql(2);
