@@ -13,3 +13,9 @@ services:
       - "3000:3000"
     depends_on:
       - db
+
+  parser:
+    image: registry.gitlab.com/showsnearme/parser
+    command: npm start
+    ports:
+      - "3001:3000"
