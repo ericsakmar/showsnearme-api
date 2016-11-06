@@ -8,8 +8,7 @@ const express = require('express'),
 router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
   const id = req.params.id;
   
-  // go to the parser
-  parser.parse(id);
+  parser.parse(id).then(e => console.log(e));
 
   Event.findById(req.params.id).then(
     (event) => res.json(event),
