@@ -249,7 +249,7 @@ describe('api', function () {
       });
     });
 
-    it('requires permissions for read', (done) => {
+    xit('requires permissions for read', (done) => {
       const params = Object.assign({}, getParams, {
         path:`${getParams.path}/${e1._id}`,
         headers: Object.assign({}, getParams.headers, {
