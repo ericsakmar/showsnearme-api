@@ -2,9 +2,15 @@ const express = require('express'),
     router = express.Router(),
     Event = require('../models/event'),
     Location = require('../models/location'),
-    mustBe = require('./auth').mustBe;
+    mustBe = require('./auth').mustBe,
+    parser = require('./parser');
 
-router.get('/events/:id', mustBe('admin'), function(req, res) {
+router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
+  const id = req.params.id;
+  
+  // go to the parser
+  parser.parse(id);
+
   Event.findById(req.params.id).then(
     (event) => res.json(event),
     (err) => res.status(404).json(err)

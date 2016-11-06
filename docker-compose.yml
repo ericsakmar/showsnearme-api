@@ -11,11 +11,12 @@ services:
       - .:/opt/api
     ports:
       - "3000:3000"
-    depends_on:
+    links:
       - db
+      - parser
 
   parser:
-    image: registry.gitlab.com/showsnearme/parser
+    image: registry.gitlab.com/showsnearme/parser:latest
     command: npm start
-    ports:
-      - "3001:3000"
+    expose:
+      - "3000"
