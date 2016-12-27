@@ -10,6 +10,15 @@ services:
     volumes:
       - .:/opt/api
     ports:
-      - "3000:3000"
-    depends_on:
+      - "3001:3000"
+    links:
       - db
+      # - parser
+
+#   parser:
+#     image: registry.gitlab.com/showsnearme/parser:latest
+#     command: npm start
+#     expose:
+#       - "3000"
+#     ports:
+#       - "3001:3000"
