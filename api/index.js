@@ -25,7 +25,7 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
     Location.findOneAndUpdate(
       {remoteId: locationData.remoteId},
       locationData,
-      { upsert:true, new:true })
+      { upsert:true, new:true }).exec()
 
         .then(loc => {
           const eventData = {
@@ -40,11 +40,13 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
           return Event.findOneAndUpdate(
             {remoteId: eventData.remoteId},
             eventData,
-            { upsert:true, new:true });
+            { upsert:true, new:true }).populate('location').exec();
         })
+
+        
       
         .then(
-          (event) => res.json(event),
+          (event) => res.json(event.toJSON()),
           (err) => res.status(404).json(err)
         );
   });
