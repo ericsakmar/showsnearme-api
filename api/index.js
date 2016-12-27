@@ -42,8 +42,6 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
             eventData,
             { upsert:true, new:true }).populate('location').exec();
         })
-
-        
       
         .then(
           (event) => res.json(event.toJSON()),
