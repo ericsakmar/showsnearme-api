@@ -15,49 +15,32 @@ function upsertLocation(db, locationData) {
   return db.collection('locations').findOneAndUpdate(
     { remoteId:locationData.remoteId }, 
     { $set:locationData },
-    { upsert:true, returnNewDocument:true });
-}
-
-function getLocationId(location) {
-  if (location.lastErrorObject.updatedExisting) {
-    return location.value._id;
-  }
-  else {
-    return location.lastErrorObject.upserted;
-  }
+    { upsert:true, returnOriginal:false });
 }
 
 function upsertEvent(db, eventData) {
   return db.collection('events').findOneAndUpdate(
     { remoteId:eventData.remoteId },
     { $set:eventData },
-    { upsert:true, returnNewDocument:true });
+    { upsert:true, returnOriginal:false });
 }
 
 function toLocationData(e) {
-  return {
-    name: e.place.name,
-    remoteId: e.place.id,
-    street: e.place.location.street,
-    city: e.place.location.city,
-    state: e.place.location.state,
-    zip: e.place.location.zip,
-    country: e.place.location.country,
-    latitude: e.place.location.latitude,
-    longitude: e.place.location.longitude
-  };
+  const loc = Object.assign({}, e.place, {
+    remoteId: e.place.id
+  });
+  delete loc.id;
+  return loc;
 }
 
 function toEventData(location, e) {
-  const location_id = getLocationId(location);
-  return {
-    name: e.name,
+  const evt = Object.assign({}, e, {
     remoteId: e.id,
-    description: e.description,
-    location_id,
-    time: e.start_time
-    // more fields
-  };            
+    location_id: location.value._id,
+  });
+  delete evt.id;
+  delete evt.location;
+  return evt;
 }
 
 function addEvent(db, e) {
@@ -70,7 +53,10 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
 
   Promise.all([ connect(), parser.parse(id) ])
     .then(values => addEvent(values[0], values[1]))
-    .then(event => res.json(event.value))
+    .then(event => {
+      console.log(event);
+      return res.json(event.value)
+    })
     .catch(e => console.log(e));
 });
 
