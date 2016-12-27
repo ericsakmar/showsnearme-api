@@ -8,7 +8,44 @@ const express = require('express'),
 router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
   const id = req.params.id;
   
-  parser.parse(id).then(e => console.log(e));
+  parser.parse(id).then(e => {
+    console.log(e);
+
+    const locationData = {
+      name: e.place.name,
+      remoteId: e.place.id,
+      street: e.place.location.street,
+      city: e.place.location.city,
+      state: e.place.location.state,
+      zip: e.place.location.zip,
+      country: e.place.location.country,
+      latitude: e.place.location.latitude,
+      longitude: e.place.location.longitude
+    };
+
+    Location.findOneAndUpdate(
+      {remoteId: locationData.remoteId},
+      locationData,
+      { upsert:true, new:true })
+
+        .then(loc => {
+          const eventData = {
+            name: e.name,
+            remoteId: e.id,
+            description: e.description,
+            location: loc,
+            time: e.start_time
+          };            
+
+
+          Event.findOneAndUpdate(
+            {remoteId: locationData.remoteId},
+            eventData,
+            { upsert:true, new:true })
+              .then(e2 => console.log(e2));
+
+        });
+  });
 
   Event.findById(req.params.id).then(
     (event) => res.json(event),
@@ -16,7 +53,7 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
   );
 });
 
-router.get('/events', mustBe('admin'), function(req, res) {
+router.get('/events', /* mustBe('admin'), */ function(req, res) {
   Event.aggregate([{ 
     $group: {
       _id: { $dateToString: { format: '%Y-%m-%d', date: '$time' } },
