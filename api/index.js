@@ -76,8 +76,15 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
 
 router.get('/events', function(req, res) {
   connect()
-    .then(db => db.collection('events').find({}))
-    .then(events => events.toArray())
+    .then(db => db.collection('events').aggregate({
+      $lookup: {
+        from: 'locations',
+        localField: 'location_id',
+        foreignField: '_id',
+        as: 'foo'
+      }
+    }))
+    .then(cur => cur.toArray())
     .then(events => res.json(events));
 });
 
