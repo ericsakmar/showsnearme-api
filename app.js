@@ -11,8 +11,6 @@ var app = express();
 
 // database
 var cfg = require('./config');
-var mongoose = require('mongoose');
-mongoose.connect(cfg.mongo.uri, cfg.mongo.db)
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
