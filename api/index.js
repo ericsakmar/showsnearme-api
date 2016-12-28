@@ -78,6 +78,7 @@ router.get('/events', function(req, res) {
       }
     ]))
     .then(cur => cur.toArray())
+    .then(events => Promise.resolve(events.sort((a, b) => new Date(a._id) - new Date(b._id))))
     .then(events => res.json(events));
 });
 
