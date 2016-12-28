@@ -37,9 +37,11 @@ function toEventData(location, e) {
   const evt = Object.assign({}, e, {
     remoteId: e.id,
     location_id: location.value._id,
+    start_time: new Date(e.start_time)
   });
   delete evt.id;
-  delete evt.location;
+  delete evt.place;
+
   return evt;
 }
 
@@ -53,23 +55,28 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
 
   Promise.all([ connect(), parser.parse(id) ])
     .then(values => addEvent(values[0], values[1]))
-    .then(event => {
-      console.log(event);
-      return res.json(event.value)
-    })
+    .then(event => res.json(event.value))
     .catch(e => console.log(e));
 });
 
 router.get('/events', function(req, res) {
   connect()
-    .then(db => db.collection('events').aggregate({
-      $lookup: {
-        from: 'locations',
-        localField: 'location_id',
-        foreignField: '_id',
-        as: 'foo'
+    .then(db => db.collection('events').aggregate([
+      {
+        $lookup: {
+          from: 'locations',
+          localField: 'location_id',
+          foreignField: '_id',
+          as: 'place'
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$start_time' } },
+          events: {$addToSet: "$$CURRENT"}
+        }
       }
-    }))
+    ]))
     .then(cur => cur.toArray())
     .then(events => res.json(events));
 });
@@ -80,19 +87,5 @@ router.get('/places', function(req, res) {
     .then(events => events.toArray())
     .then(events => res.json(events));
 });
-
-// router.get('/events', /* mustBe('admin'), */ function(req, res) {
-//   Event.aggregate([{ 
-//     $group: {
-//       _id: { $dateToString: { format: '%Y-%m-%d', date: '$time' } },
-//       events: {$addToSet: "$$CURRENT"}
-//     }
-//   }])
-//   .exec()
-//   .then(
-//     (events) => { res.json(events); },
-//     (err) => { res.status(500).json(err) }
-//   );
-// });
 
 module.exports = router;
