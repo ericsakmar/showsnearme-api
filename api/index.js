@@ -1,11 +1,11 @@
 const express = require('express'),
     router = express.Router(),
     mustBe = require('./auth').mustBe,
-    parser = require('./parser');
+    parser = require('./parser'),
+    config = require('../config');
 
-// TODO move these to config
 const MongoClient = require('mongodb').MongoClient,
-  dbUrl = 'mongodb://localhost:27017/api-dev';
+  dbUrl = `mongodb://${config.mongo.uri}/${config.mongo.db}`;
 
 function connect() {
   return MongoClient.connect(dbUrl);
@@ -15,14 +15,22 @@ function upsertLocation(db, locationData) {
   return db.collection('locations').findOneAndUpdate(
     { remoteId:locationData.remoteId }, 
     { $set:locationData },
-    { upsert:true, returnOriginal:false });
+    { upsert:true, returnOriginal:false })
+
+      .then(res => Promise.resolve(res.value));
 }
 
-function upsertEvent(db, eventData) {
+function upsertEvent(db, location, eventData) {
   return db.collection('events').findOneAndUpdate(
     { remoteId:eventData.remoteId },
     { $set:eventData },
-    { upsert:true, returnOriginal:false });
+    { upsert:true, returnOriginal:false })
+
+      .then(res => Promise.resolve(res.value))
+
+      .then(event => Promise.resolve(Object.assign({}, event, {
+        place: location
+      })));
 }
 
 function toLocationData(e) {
@@ -36,8 +44,8 @@ function toLocationData(e) {
 function toEventData(location, e) {
   const evt = Object.assign({}, e, {
     remoteId: e.id,
-    location_id: location.value._id,
-    start_time: new Date(e.start_time)
+    start_time: new Date(e.start_time),
+    location_id: location._id
   });
   delete evt.id;
   delete evt.place;
@@ -47,7 +55,7 @@ function toEventData(location, e) {
 
 function addEvent(db, e) {
   return upsertLocation(db, toLocationData(e))
-    .then(location => upsertEvent(db, toEventData(location, e)))
+    .then(location => upsertEvent(db, location, toEventData(location, e)));
 }
 
 router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
@@ -55,7 +63,7 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
 
   Promise.all([ connect(), parser.parse(id) ])
     .then(values => addEvent(values[0], values[1]))
-    .then(event => res.json(event.value))
+    .then(event => res.json(event))
     .catch(e => console.log(e));
 });
 
