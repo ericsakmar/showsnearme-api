@@ -75,6 +75,30 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
     .catch(e => console.log(e));
 });
 
+// router.get('/events', function(req, res) {
+//   connect()
+//     .then(db => db.collection('events').aggregate([
+//       {
+//         $lookup: {
+//           from: 'locations',
+//           localField: 'location_id',
+//           foreignField: '_id',
+//           as: 'place'
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: { $dateToString: { format: '%Y-%m-%d', date: '$start_time' } },
+//           events: {$addToSet: "$$CURRENT"}
+//         }
+//       }
+//     ]))
+//     .then(cur => cur.toArray())
+//     .then(events => Promise.resolve(events.sort((a, b) => new Date(a._id) - new Date(b._id))))
+//     .then(events => res.json(events))
+//     .catch(e => console.log(e));
+// });
+
 router.get('/events', function(req, res) {
   connect()
     .then(db => db.collection('events').aggregate([
@@ -85,16 +109,10 @@ router.get('/events', function(req, res) {
           foreignField: '_id',
           as: 'place'
         }
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$start_time' } },
-          events: {$addToSet: "$$CURRENT"}
-        }
       }
     ]))
+    .then(query => query.sort({start_time:1}))
     .then(cur => cur.toArray())
-    .then(events => Promise.resolve(events.sort((a, b) => new Date(a._id) - new Date(b._id))))
     .then(events => res.json(events))
     .catch(e => console.log(e));
 });
