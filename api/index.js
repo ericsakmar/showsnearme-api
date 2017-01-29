@@ -45,17 +45,25 @@ function toEventData(location, e) {
   const evt = Object.assign({}, e, {
     remoteId: e.id,
     start_time: new Date(e.start_time),
-    location_id: location._id
   });
   delete evt.id;
   delete evt.place;
+
+  if (location) {
+    evt.location_id = location._id;
+  }
 
   return evt;
 }
 
 function addEvent(db, e) {
-  return upsertLocation(db, toLocationData(e))
-    .then(location => upsertEvent(db, location, toEventData(location, e)));
+  if (e.place) {
+    return upsertLocation(db, toLocationData(e))
+      .then(location => upsertEvent(db, location, toEventData(location, e)));
+  }
+  else {
+    return upsertEvent(db, undefined, toEventData(undefined, e));
+  }
 }
 
 router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
@@ -87,7 +95,8 @@ router.get('/events', function(req, res) {
     ]))
     .then(cur => cur.toArray())
     .then(events => Promise.resolve(events.sort((a, b) => new Date(a._id) - new Date(b._id))))
-    .then(events => res.json(events));
+    .then(events => res.json(events))
+    .catch(e => console.log(e));
 });
 
 router.get('/places', function(req, res) {
@@ -95,6 +104,22 @@ router.get('/places', function(req, res) {
     .then(db => db.collection('locations').find({}))
     .then(events => events.toArray())
     .then(events => res.json(events));
+});
+
+router.get('/import/:id', function(req, res) {
+  const id = req.params.id;
+
+  parser.feed(id)
+    // map ids to parse requests
+    .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
+    // combine into one
+    .then(parseReqs => Promise.all(parseReqs))
+    // resolve and add to db
+    .then(parseReq => Promise.all([connect(), parseReq]))
+    // map to save requests
+    .then(values =>  Promise.all(values[1].map(event => addEvent(values[0], event))))
+    // done!!
+    .then(added => res.json({added:added.length}));
 });
 
 module.exports = router;

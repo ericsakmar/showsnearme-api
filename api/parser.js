@@ -12,6 +12,17 @@ function parse(id) {
   return request(options);
 }
 
+function feed(id) {
+  const options = {
+    uri: `http://localhost:3000/feed/${id}`,
+    json: true,
+    headers: {
+      'Content-Type':'application/json'
+    }
+  };
+  return request(options);
+}
+
 module.exports = {
-  parse
+  parse, feed
 };
