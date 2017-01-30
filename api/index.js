@@ -100,6 +100,19 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
 // });
 
 router.get('/events', function(req, res) {
+  const filters = {};
+
+  if (req.query.since) {
+    filters['start_time'] = {
+      '$gte':  new Date(req.query.since)
+    };
+  }
+
+  if (req.query.until) {
+    filters['start_time'] = filters['start_time'] || {};
+    filters['start_time']['$lte'] =  new Date(req.query.until);
+  }
+
   connect()
     .then(db => db.collection('events').aggregate([
       {
@@ -109,6 +122,9 @@ router.get('/events', function(req, res) {
           foreignField: '_id',
           as: 'place'
         }
+      },
+      {
+        $match: filters 
       }
     ]))
     .then(query => query.sort({start_time:1}))
