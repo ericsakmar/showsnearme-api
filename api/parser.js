@@ -23,6 +23,17 @@ function feed(id) {
   return request(options);
 }
 
+function feedInfo(id) {
+  const options = {
+    uri: `http://localhost:3000/feed_info/${id}`,
+    json: true,
+    headers: {
+      'Content-Type':'application/json'
+    }
+  };
+  return request(options);
+}
+
 module.exports = {
-  parse, feed
+  parse, feed, feedInfo
 };

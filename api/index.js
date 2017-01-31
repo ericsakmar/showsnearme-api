@@ -66,6 +66,18 @@ function addEvent(db, e) {
   }
 }
 
+function addFeed(db, feed) {
+  feed.remoteId = feed.id;
+  delete feed.id;
+  return db.collection('feeds').findOneAndUpdate(
+    { remoteId:feed.remoteId }, 
+    { $set:feed },
+    { upsert:true, returnOriginal:false })
+
+      .then(res => Promise.resolve(res.value));
+}
+
+
 router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
   const id = req.params.id;
 
@@ -74,30 +86,6 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
     .then(event => res.json(event))
     .catch(e => console.log(e));
 });
-
-// router.get('/events', function(req, res) {
-//   connect()
-//     .then(db => db.collection('events').aggregate([
-//       {
-//         $lookup: {
-//           from: 'locations',
-//           localField: 'location_id',
-//           foreignField: '_id',
-//           as: 'place'
-//         }
-//       },
-//       {
-//         $group: {
-//           _id: { $dateToString: { format: '%Y-%m-%d', date: '$start_time' } },
-//           events: {$addToSet: "$$CURRENT"}
-//         }
-//       }
-//     ]))
-//     .then(cur => cur.toArray())
-//     .then(events => Promise.resolve(events.sort((a, b) => new Date(a._id) - new Date(b._id))))
-//     .then(events => res.json(events))
-//     .catch(e => console.log(e));
-// });
 
 router.get('/events', function(req, res) {
   const filters = {};
@@ -154,6 +142,20 @@ router.get('/import/:id', function(req, res) {
     .then(values =>  Promise.all(values[1].map(event => addEvent(values[0], event))))
     // done!!
     .then(added => res.json({added:added.length}));
+});
+
+router.get('/feeds', function(req, res) {
+  connect()
+    .then(db => db.collection('feeds').find({}))
+    .then(feeds => feeds.toArray())
+    .then(feeds => res.json(feeds));
+});
+
+router.post('/feeds/:id', function(req, res) {
+  const id = req.params.id;
+  Promise.all([ connect(), parser.feedInfo(id) ])
+    .then(values => addFeed(values[0], values[1]))
+    .then(feed => res.json(feed));
 });
 
 module.exports = router;
