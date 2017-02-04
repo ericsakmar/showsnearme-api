@@ -7,9 +7,6 @@ const auth = {
     return function(req, res, next) {
       const key = req.headers.authorization;
 
-      console.log(roles);
-      console.log(key);
-
       const authorized = roles
         .map((r) => keys[r])
         .map((k) => k === key)
