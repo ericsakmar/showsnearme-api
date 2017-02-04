@@ -78,7 +78,7 @@ function addFeed(db, feed) {
 }
 
 
-router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
+router.get('/events/:id', mustBe('admin', 'web'), function(req, res) {
   const id = req.params.id;
 
   Promise.all([ connect(), parser.parse(id) ])
@@ -87,7 +87,7 @@ router.get('/events/:id', /* mustBe('admin'), */ function(req, res) {
     .catch(e => console.log(e));
 });
 
-router.get('/events', function(req, res) {
+router.get('/events', mustBe('admin', 'web'),  function(req, res) {
   const filters = {};
 
   if (req.query.since) {
@@ -121,14 +121,14 @@ router.get('/events', function(req, res) {
     .catch(e => console.log(e));
 });
 
-router.get('/places', function(req, res) {
+router.get('/places', mustBe('admin', 'web'), function(req, res) {
   connect()
     .then(db => db.collection('locations').find({}))
     .then(events => events.toArray())
     .then(events => res.json(events));
 });
 
-router.get('/import/:id', function(req, res) {
+router.get('/import/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
 
   parser.feed(id)
@@ -144,14 +144,15 @@ router.get('/import/:id', function(req, res) {
     .then(added => res.json({added:added.length}));
 });
 
-router.get('/feeds', function(req, res) {
+router.get('/feeds', mustBe('admin'), function(req, res) {
   connect()
     .then(db => db.collection('feeds').find({}))
     .then(feeds => feeds.toArray())
-    .then(feeds => res.json(feeds));
+    .then(feeds => res.json(feeds))
+    .catch(e => console.log(e));
 });
 
-router.post('/feeds/:id', function(req, res) {
+router.post('/feeds/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
   Promise.all([ connect(), parser.feedInfo(id) ])
     .then(values => addFeed(values[0], values[1]))
