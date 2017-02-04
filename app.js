@@ -4,7 +4,6 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var cors = require('cors');
 
 var config = require('./config');
 var api = require('./api');
@@ -23,15 +22,6 @@ app.use(cookieParser());
 
 // uncomment to serve static assets
 // app.use(express.static(path.join(__dirname, 'public')));
-
-var corsOptions = {
-  origin: function(origin, callback){
-    console.log(origin);
-    var originIsWhitelisted = origin === config.cors;
-    callback(originIsWhitelisted ? null : 'Bad Request', originIsWhitelisted);
-  }
-};
-app.use(cors(corsOptions));
 
 app.use('/', api);
 
