@@ -1,11 +1,13 @@
 const request = require('request-promise');
+const config = require('../config');
 
 function parse(id) {
   const options = {
-    uri: `http://localhost:3000/${id}`,
+    uri: `${config.parserUrl}/${id}`,
     json: true,
     headers: {
-      'Content-Type':'application/json'
+      'Content-Type':'application/json',
+      'Authorization':config.authToken,
     }
   };
 
@@ -14,10 +16,11 @@ function parse(id) {
 
 function feed(id) {
   const options = {
-    uri: `http://localhost:3000/feed/${id}`,
+    uri: `${config.parserUrl}/feed/${id}`,
     json: true,
     headers: {
-      'Content-Type':'application/json'
+      'Content-Type':'application/json',
+      'Authorization':config.authToken,
     }
   };
   return request(options);
@@ -25,10 +28,11 @@ function feed(id) {
 
 function feedInfo(id) {
   const options = {
-    uri: `http://localhost:3000/feed_info/${id}`,
+    uri: `${config.parserUrl}/feed_info/${id}`,
     json: true,
     headers: {
-      'Content-Type':'application/json'
+      'Content-Type':'application/json',
+      'Authorization':config.authToken,
     }
   };
   return request(options);
