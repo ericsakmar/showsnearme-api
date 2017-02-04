@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "cors": "^2.8.1",
     "mocha": "^2.3.3",
     "request": "^2.77.0",
     "request-promise": "^4.1.1",
