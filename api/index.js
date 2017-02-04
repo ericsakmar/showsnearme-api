@@ -4,11 +4,10 @@ const express = require('express'),
     parser = require('./parser'),
     config = require('../config');
 
-const MongoClient = require('mongodb').MongoClient,
-  dbUrl = `mongodb://${config.mongo.uri}/${config.mongo.db}`;
+const MongoClient = require('mongodb').MongoClient;
 
 function connect() {
-  return MongoClient.connect(dbUrl);
+  return MongoClient.connect(config.mongo.uri);
 }
 
 function upsertLocation(db, locationData) {

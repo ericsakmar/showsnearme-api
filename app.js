@@ -23,6 +23,22 @@ app.use(cookieParser());
 // uncomment to serve static assets
 // app.use(express.static(path.join(__dirname, 'public')));
 
+var httpsOnly = function(req, res, next) {
+  if (process.env.NODE_ENV === 'production') {
+    if (req.headers['x-forwarded-proto'] === 'https') {
+      return next();
+    } else {
+      // no https, no data
+      var err = new Error('Not Found');
+      err.status = 404;
+      next(err);
+    }
+  } else {
+    return next();
+  }
+};
+app.use(httpsOnly);
+
 app.use('/', api);
 
 // catch 404 and forward to error handler
