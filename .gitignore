@@ -1,8 +1,4 @@
 node_modules/
 npm-debug.log
-config/config.test.js
-config/config.development.js
-config/config.production.js
 .DS_Store
 *.swp
-keys.js
