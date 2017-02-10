@@ -1,9 +1,10 @@
-const keys = require('./keys');
 const config = require('../config');
 
 const auth = {
   mustBe: function() {
-    const roles = Array.from(arguments);
+    const roles = Array.from(arguments)
+      .map(role => role.toUpperCase())
+      .map(role => role + '_TOKEN');
 
     return function(req, res, next) {
 
@@ -16,7 +17,7 @@ const auth = {
         const key = req.headers.authorization;
 
         const authorized = roles
-          .map((r) => keys[r])
+          .map((r) => process.env[r])
           .map((k) => k === key)
           .reduce((a,c) => a || c, false);
 
