@@ -146,6 +146,7 @@ router.get('/import/:id', mustBe('admin'), function(req, res) {
 router.get('/feeds', mustBe('admin'), function(req, res) {
   connect()
     .then(db => db.collection('feeds').find({}))
+    .then(feeds => feeds.sort({ name: 1}))
     .then(feeds => feeds.toArray())
     .then(feeds => res.json(feeds))
     .catch(e => console.log(e));
