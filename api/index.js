@@ -165,10 +165,7 @@ router.delete('/feeds/:id', mustBe('admin'), function(req, res) {
   connect()
     .then(db => db.collection('feeds'))
     .then(feeds => feeds.findOneAndDelete({ '_id': id }))
-    .then(r => {
-      console.log(r.deletedCount);
-      res.json({ msg: "deleted" });
-    })
+    .then(r => res.json({ msg: "deleted" }))
     .catch(e => console.log(e));
 });
 
