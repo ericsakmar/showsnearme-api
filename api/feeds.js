@@ -9,4 +9,17 @@ function addFeed(db, feed) {
       .then(res => Promise.resolve(res.value));
 }
 
-module.exports = { addFeed };
+function update(db, remoteId, updates) {
+
+  return db.collection('feeds').findOneAndUpdate(
+    { remoteId },
+    { $set: updates },
+    { returnOriginal: false })
+
+      .then(res => Promise.resolve(res.value));
+}
+
+module.exports = { 
+  addFeed,
+  update,
+};

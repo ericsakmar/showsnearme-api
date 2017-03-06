@@ -78,18 +78,21 @@ router.get('/places', mustBe('admin', 'web'), function(req, res) {
 router.get('/import/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
 
-  parser.feed(id)
-    // map ids to parse requests
-    .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
-    // combine into one
-    .then(parseReqs => Promise.all(parseReqs))
-    // resolve and add to db
-    .then(parseReq => Promise.all([connect(), parseReq]))
-    // map to save requests
-    .then(values =>  Promise.all(values[1].map(event => addEvent(values[0], event))))
-    // done!!
-    .then(added => res.json({added:added.length}))
-    .catch(e => console.log(e));
+  connect().then(db => {
+    parser.feed(id)
+      // map ids to parse requests
+      .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
+      // combine into one
+      .then(parseReqs => Promise.all(parseReqs))
+      // map to save requests
+      .then(values =>  Promise.all(values.map(event => addEvent(db, event))))
+      // update feed data
+      .then(added => feeds.update(db, id, { lastImport: { date: new Date(), count: added.length } }))
+      // return the fresh feed data
+      .then(feed => res.json(feed))
+      // errors
+      .catch(e => console.log(e));
+  });
 });
 
 router.get('/feeds', mustBe('admin'), function(req, res) {
