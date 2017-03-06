@@ -2,7 +2,10 @@ const express = require('express'),
     router = express.Router(),
     mustBe = require('./auth').mustBe,
     parser = require('./parser'),
-    config = require('../config');
+    config = require('../config'),
+    events = require('./events'),
+    locations = require('./locations'),
+    feeds = require('./feeds');
 
 const MongoClient = require('mongodb').MongoClient;
 const ObjectId = require('mongodb').ObjectId;
@@ -11,70 +14,48 @@ function connect() {
   return MongoClient.connect(config.mongo.uri);
 }
 
-function upsertLocation(db, locationData) {
-  return db.collection('locations').findOneAndUpdate(
-    { remoteId:locationData.remoteId }, 
-    { $set:locationData },
-    { upsert:true, returnOriginal:false })
-
-      .then(res => Promise.resolve(res.value));
-}
-
-function upsertEvent(db, location, eventData) {
-  return db.collection('events').findOneAndUpdate(
-    { remoteId:eventData.remoteId },
-    { $set:eventData },
-    { upsert:true, returnOriginal:false })
-
-      .then(res => Promise.resolve(res.value))
-
-      .then(event => Promise.resolve(Object.assign({}, event, {
-        place: location
-      })));
-}
-
-function toLocationData(e) {
-  const loc = Object.assign({}, e.place, {
-    remoteId: e.place.id
-  });
-  delete loc.id;
-  return loc;
-}
-
-function toEventData(location, e) {
-  const evt = Object.assign({}, e, {
-    remoteId: e.id,
-    start_time: new Date(e.start_time),
-  });
-  delete evt.id;
-  delete evt.place;
-
-  if (location) {
-    evt.location_id = location._id;
-  }
-
-  return evt;
-}
-
 function addEvent(db, e) {
   if (e.place) {
-    return upsertLocation(db, toLocationData(e))
-      .then(location => upsertEvent(db, location, toEventData(location, e)));
+    return locations.upsertLocation(db, locations.toLocationData(e))
+      .then(location => events.upsertEvent(db, location, events.toEventData(location, e)));
   }
   else {
-    return upsertEvent(db, undefined, toEventData(undefined, e));
+    return events.upsertEvent(db, undefined, events.toEventData(undefined, e));
   }
 }
 
-function addFeed(db, feed) {
-  feed.remoteId = feed.id;
-  delete feed.id;
-  return db.collection('feeds').findOneAndUpdate(
-    { remoteId:feed.remoteId }, 
-    { $set:feed },
-    { upsert:true, returnOriginal:false })
+function importFeed(db, id) {
+  return parser.feed(id)
+    // map ids to parse requests
+    .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
+    // combine into one
+    .then(parseReqs => Promise.all(parseReqs))
+    // map to save requests
+    .then(values =>  Promise.all(values.map(event => addEvent(db, event))))
+    // update feed data
+    .then(added => feeds.update(db, id, { lastImport: { date: new Date(), count: added.length } }))
+    // errors
+    .catch(e => {
+      console.log(e);
+      return Promise.reject(e);
+    });
+}
 
-      .then(res => Promise.resolve(res.value));
+function megaImport(db) {
+  return Promise.resolve(db.collection('feeds').find({}))
+    .then(f => f.toArray())
+    // create import requests for each feed
+    .then(feeds => feeds.map(feed => importFeed(db, feed.remoteId)))
+    // execute
+    .then(imports => Promise.all(imports))
+    // add up the totals
+    .then(imported => imported.map(feed => feed.lastImport.count))
+    .then(counts => counts.reduce((count, total) => total + count, 0))
+    // errors
+    .catch(e => {
+      console.log(e);
+      return Promise.reject(e);
+    });
 }
 
 
@@ -125,23 +106,18 @@ router.get('/places', mustBe('admin', 'web'), function(req, res) {
   connect()
     .then(db => db.collection('locations').find({}))
     .then(events => events.toArray())
-    .then(events => res.json(events));
+    .then(events => res.json(events))
+    .catch(e => console.log(e));
 });
 
 router.get('/import/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
 
-  parser.feed(id)
-    // map ids to parse requests
-    .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
-    // combine into one
-    .then(parseReqs => Promise.all(parseReqs))
-    // resolve and add to db
-    .then(parseReq => Promise.all([connect(), parseReq]))
-    // map to save requests
-    .then(values =>  Promise.all(values[1].map(event => addEvent(values[0], event))))
-    // done!!
-    .then(added => res.json({added:added.length}));
+  connect()
+    .then(db => importFeed(db, id))
+    .then(feed => res.json(feed))
+    .catch(e => console.log(e));
+
 });
 
 router.get('/feeds', mustBe('admin'), function(req, res) {
@@ -156,8 +132,9 @@ router.get('/feeds', mustBe('admin'), function(req, res) {
 router.post('/feeds/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
   Promise.all([ connect(), parser.feedInfo(id) ])
-    .then(values => addFeed(values[0], values[1]))
-    .then(feed => res.json(feed));
+    .then(values => feeds.addFeed(values[0], values[1]))
+    .then(feed => res.json(feed))
+    .catch(e => console.log(e));
 });
 
 router.delete('/feeds/:id', mustBe('admin'), function(req, res) {
@@ -167,6 +144,15 @@ router.delete('/feeds/:id', mustBe('admin'), function(req, res) {
     .then(feeds => feeds.findOneAndDelete({ '_id': id }))
     .then(r => res.json({ msg: "deleted" }))
     .catch(e => console.log(e));
+});
+
+router.post('/mega_import', mustBe('admin'), function(req, res) {
+
+  connect()
+    .then(db => megaImport(db)) 
+    .then(f => res.json({ count: f }))
+    .catch(e => console.log(e));
+    
 });
 
 module.exports = router;
