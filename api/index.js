@@ -5,6 +5,7 @@ const express = require('express'),
     config = require('../config');
 
 const MongoClient = require('mongodb').MongoClient;
+const ObjectId = require('mongodb').ObjectId;
 
 function connect() {
   return MongoClient.connect(config.mongo.uri);
@@ -157,6 +158,18 @@ router.post('/feeds/:id', mustBe('admin'), function(req, res) {
   Promise.all([ connect(), parser.feedInfo(id) ])
     .then(values => addFeed(values[0], values[1]))
     .then(feed => res.json(feed));
+});
+
+router.delete('/feeds/:id', mustBe('admin'), function(req, res) {
+  const id = ObjectId(req.params.id);
+  connect()
+    .then(db => db.collection('feeds'))
+    .then(feeds => feeds.findOneAndDelete({ '_id': id }))
+    .then(r => {
+      console.log(r.deletedCount);
+      res.json({ msg: "deleted" });
+    })
+    .catch(e => console.log(e));
 });
 
 module.exports = router;
