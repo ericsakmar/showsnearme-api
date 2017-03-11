@@ -14,56 +14,11 @@ function connect() {
   return MongoClient.connect(config.mongo.uri);
 }
 
-function addEvent(db, e) {
-  if (e.place) {
-    return locations.upsertLocation(db, locations.toLocationData(e))
-      .then(location => events.upsertEvent(db, location, events.toEventData(location, e)));
-  }
-  else {
-    return events.upsertEvent(db, undefined, events.toEventData(undefined, e));
-  }
-}
-
-function importFeed(db, id) {
-  return parser.feed(id)
-    // map ids to parse requests
-    .then(eventIds => Promise.resolve(eventIds.map(eventId => parser.parse(eventId))))
-    // combine into one
-    .then(parseReqs => Promise.all(parseReqs))
-    // map to save requests
-    .then(values =>  Promise.all(values.map(event => addEvent(db, event))))
-    // update feed data
-    .then(added => feeds.update(db, id, { lastImport: { date: new Date(), count: added.length } }))
-    // errors
-    .catch(e => {
-      console.log(e);
-      return Promise.reject(e);
-    });
-}
-
-function megaImport(db) {
-  return Promise.resolve(db.collection('feeds').find({}))
-    .then(f => f.toArray())
-    // create import requests for each feed
-    .then(feeds => feeds.map(feed => importFeed(db, feed.remoteId)))
-    // execute
-    .then(imports => Promise.all(imports))
-    // add up the totals
-    .then(imported => imported.map(feed => feed.lastImport.count))
-    .then(counts => counts.reduce((count, total) => total + count, 0))
-    // errors
-    .catch(e => {
-      console.log(e);
-      return Promise.reject(e);
-    });
-}
-
-
 router.get('/events/:id', mustBe('admin', 'web'), function(req, res) {
   const id = req.params.id;
 
   Promise.all([ connect(), parser.parse(id) ])
-    .then(values => addEvent(values[0], values[1]))
+    .then(values => events.addEvent(values[0], values[1]))
     .then(event => res.json(event))
     .catch(e => console.log(e));
 });
@@ -114,7 +69,7 @@ router.get('/import/:id', mustBe('admin'), function(req, res) {
   const id = req.params.id;
 
   connect()
-    .then(db => importFeed(db, id))
+    .then(db => feeds.importFeed(db, id))
     .then(feed => res.json(feed))
     .catch(e => console.log(e));
 
@@ -149,7 +104,7 @@ router.delete('/feeds/:id', mustBe('admin'), function(req, res) {
 router.post('/mega_import', mustBe('admin'), function(req, res) {
 
   connect()
-    .then(db => megaImport(db)) 
+    .then(db => feeds.megaImport(db)) 
     .then(f => res.json({ count: f }))
     .catch(e => console.log(e));
     

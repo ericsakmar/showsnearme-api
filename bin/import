@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+
+const MongoClient = require('mongodb').MongoClient;
+const config = require('../config');
+const feeds = require('../api/feeds');
+
+MongoClient.connect(config.mongo.uri)
+  .then(db => {
+
+    feeds.megaImport(db) 
+      .then(f => {
+        console.log(`imported ${f} events`);
+        db.close();
+      })
+      .catch(e => {
+        console.log(e);
+        db.close();
+      });
+
+  });
+
