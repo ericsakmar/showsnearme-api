@@ -1,3 +1,5 @@
+const locations = require('./locations');
+
 function toEventData(location, e) {
   const evt = Object.assign({}, e, {
     remoteId: e.id,
@@ -26,7 +28,18 @@ function upsertEvent(db, location, eventData) {
       })));
 }
 
+function addEvent(db, e) {
+  if (e.place) {
+    return locations.upsertLocation(db, locations.toLocationData(e))
+      .then(location => upsertEvent(db, location, toEventData(location, e)));
+  }
+  else {
+    return upsertEvent(db, undefined, toEventData(undefined, e));
+  }
+}
+
 module.exports = {
+  addEvent,
   toEventData,
   upsertEvent,
 };
