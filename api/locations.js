@@ -1,6 +1,7 @@
 function upsertLocation(db, locationData) {
+  // TODO better name string comparison
   return db.collection('locations').findOneAndUpdate(
-    { remoteId:locationData.remoteId }, 
+    { remoteId:locationData.remoteId, name:locationData.name }, 
     { $set:locationData },
     { upsert:true, returnOriginal:false })
 
