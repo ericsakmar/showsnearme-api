@@ -14,15 +14,6 @@ function connect() {
   return MongoClient.connect(config.mongo.uri);
 }
 
-router.get('/events/:id', mustBe('admin', 'web'), function(req, res) {
-  const id = req.params.id;
-
-  Promise.all([ connect(), parser.parse(id) ])
-    .then(values => events.addEvent(values[0], values[1]))
-    .then(event => res.json(event))
-    .catch(e => console.log(e));
-});
-
 router.get('/events', mustBe('admin', 'web'),  function(req, res) {
   const filters = {};
 
@@ -37,30 +28,17 @@ router.get('/events', mustBe('admin', 'web'),  function(req, res) {
     filters['start_time']['$lte'] =  new Date(req.query.until);
   }
 
+  filters['location'] = { 
+    $nearSphere: { 
+      $geometry: { type: "Point", coordinates: [ -79.9901, 40.4417] }, 
+      $maxDistance: 80000 // about 50 mi
+    } 
+  };
+
   connect()
-    .then(db => db.collection('events').aggregate([
-      {
-        $lookup: {
-          from: 'locations',
-          localField: 'location_id',
-          foreignField: '_id',
-          as: 'place'
-        }
-      },
-      {
-        $match: filters 
-      }
-    ]))
+    .then(db => db.collection('events').find(filters, { description: 0 }))
     .then(query => query.sort({start_time:1}))
     .then(cur => cur.toArray())
-    .then(events => res.json(events))
-    .catch(e => console.log(e));
-});
-
-router.get('/places', mustBe('admin', 'web'), function(req, res) {
-  connect()
-    .then(db => db.collection('locations').find({}))
-    .then(events => events.toArray())
     .then(events => res.json(events))
     .catch(e => console.log(e));
 });
