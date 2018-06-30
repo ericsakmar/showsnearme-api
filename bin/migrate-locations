@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+
+const MongoClient = require('mongodb').MongoClient;
+const config = require('../config');
+const feeds = require('../api/feeds');
+
+MongoClient.connect(config.mongo.uri).then(db => {
+  const events = db.collection('events');
+
+  const addIndex = events.createIndex({location: '2dsphere'});
+
+  const updates = Promise.resolve(events.find())
+    .then(cursor => cursor.toArray())
+    .then(events =>
+      events.map(event => {
+        if (event.location_id) {
+          const findLocation = db
+            .collection('locations')
+            .findOne({_id: event.location_id});
+          return [Promise.resolve(event), findLocation];
+        } else {
+          return [Promise.resolve(event)];
+        }
+      }),
+    )
+    .then(originals => originals.map(data => Promise.all(data)))
+    .then(originals => Promise.all(originals))
+    .then(originals =>
+      originals.map(([event, location]) => transform(event, location)),
+    )
+    .then(updated => updated.map(event => update(events, event)));
+
+  addIndex
+    .then(res => updates)
+    .then(res => Promise.all(res))
+    .then(events => {
+      console.log(`updated ${events.length} events`);
+      process.exit(1);
+    });
+});
+
+function update(events, newEvent) {
+  return events.replaceOne({_id: newEvent._id}, newEvent);
+}
+
+function transform(event, place) {
+  const newEvent = {
+    ...event,
+    id: event.remoteId,
+  };
+  delete newEvent.remoteId;
+  delete newEvent.location_id;
+  delete newEvent.owner;
+
+  if (place) {
+    const newPlace = {
+      ...place,
+      id: place.remoteId,
+    };
+    delete newPlace.remoteId;
+    delete newPlace.location;
+    newEvent.place = newPlace;
+
+    if (place.location) {
+      newEvent.location = {
+        type: 'Point',
+        coordinates: [place.location.longitude, place.location.latitude],
+      };
+    }
+  }
+
+  if (!place || !newEvent.place) {
+    newEvent.location = {
+      type: 'Point',
+      coordinates: [-79.9901, 40.4417], // pittsburgh
+    };
+  }
+  return newEvent;
+}
